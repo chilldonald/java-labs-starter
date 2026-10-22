@@ -28,4 +28,11 @@ class FeatureProcessorTest {
     void nullStrategyIsRejected() {
         assertThrows(IllegalArgumentException.class, () -> new FeatureProcessor(null));
     }
+
+    @Test
+        void thirdStrategyPluggedInWithoutChangingProcessor() {
+            FeatureProcessor zScore = new FeatureProcessor(new ZScoreNormalization());
+            double[] result = zScore.process(new double[]{1, 2, 3, 4, 5});
+            assertEquals(0.0, result[2], EPS); // среднее значение переходит в 0
+    }
 }
