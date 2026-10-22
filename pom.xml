@@ -11,6 +11,11 @@
 
     <modules>
         <module>lab01</module>
+<<<<<<< HEAD
+=======
+        <module>lab02</module>
+        <module>lab03</module>
+>>>>>>> 4e4c3f6 (lab03: стратегии нормализации и FeatureProcessor)
     </modules>
 
     <properties>
