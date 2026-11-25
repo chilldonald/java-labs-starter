@@ -11,8 +11,8 @@ class SampleIdTest {
         SampleId a = new SampleId("iris", 5);
         SampleId b = new SampleId("iris", 5);
 
-        assertNotSame(a, b);                       // разные объекты
-        assertEquals(a, b);                        // но равны логически
+        assertNotSame(a, b);                       
+        assertEquals(a, b);                        
         assertEquals(a.hashCode(), b.hashCode());
     }
 
