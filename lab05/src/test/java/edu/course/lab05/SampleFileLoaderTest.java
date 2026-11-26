@@ -163,4 +163,75 @@ class SampleFileLoaderTest {
     void nullPathIsRejected() {
         assertThrows(IllegalArgumentException.class, () -> loader.load(null));
     }
+        @Test
+    void delimiterInsideQuotesIsPartOfField() throws IOException {
+        LoadResult result = loader.load(write(HEADER, "S-1;\"cat; black\";camera-1;16;READY"));
+
+        assertFalse(result.hasErrors());
+        assertEquals("cat; black", result.getSamples().get(0).getLabel());
+    }
+
+    @Test
+    void doubledQuoteInsideQuotesIsOneQuote() throws IOException {
+        LoadResult result = loader.load(write(HEADER, "S-1;\"say \"\"hi\"\"\";camera-1;16;READY"));
+
+        assertFalse(result.hasErrors());
+        assertEquals("say \"hi\"", result.getSamples().get(0).getLabel());
+    }
+
+    @Test
+    void quotedFieldWithoutDelimiterWorks() throws IOException {
+        LoadResult result = loader.load(write(HEADER, "S-1;\"cat\";camera-1;16;READY"));
+
+        assertFalse(result.hasErrors());
+        assertEquals("cat", result.getSamples().get(0).getLabel());
+    }
+
+    @Test
+    void quoteInsideUnquotedFieldIsOrdinaryCharacter() throws IOException {
+        LoadResult result = loader.load(write(HEADER, "S-1;ca\"t;camera-1;16;READY"));
+
+        assertFalse(result.hasErrors());
+        assertEquals("ca\"t", result.getSamples().get(0).getLabel());
+    }
+
+    @Test
+    void unclosedQuoteIsReported() throws IOException {
+        LoadResult result = loader.load(write(HEADER, "S-1;\"cat;camera-1;16;READY"));
+
+        assertTrue(result.getSamples().isEmpty());
+        assertEquals(1, result.getErrors().size());
+        assertEquals("row", result.getErrors().get(0).getField());
+        assertEquals(2, result.getErrors().get(0).getLineNumber());
+    }
+
+    @Test
+    void emptyQuotedFieldIsReportedAsEmpty() throws IOException {
+        LoadResult result = loader.load(write(HEADER, "S-1;\"\";camera-1;16;READY"));
+
+        assertEquals("label", result.getErrors().get(0).getField());
+    }
+
+    @Test
+    void quotedFieldsDoNotBreakOtherRows() throws IOException {
+        LoadResult result = loader.load(write(
+                HEADER,
+                "S-1;\"a;b\";cam;16;READY",
+                "S-2;\"broken;cam;16;READY",
+                "S-3;ok;cam;16;READY"));
+
+        assertEquals(2, result.getSamples().size());
+        assertEquals(1, result.getErrors().size());
+        assertEquals(3, result.getErrors().get(0).getLineNumber());
+    }
+
+    @Test
+    void splitFieldsKeepsTrailingEmptyField() {
+        assertEquals(java.util.Arrays.asList("a", "b", ""), SampleFileLoader.splitFields("a;b;"));
+    }
+
+    @Test
+    void splitFieldsHandlesQuotesAndDelimiters() {
+        assertEquals(java.util.Arrays.asList("a;b", "c"), SampleFileLoader.splitFields("\"a;b\";c"));
+    }
 }

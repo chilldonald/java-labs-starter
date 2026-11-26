@@ -10,7 +10,7 @@ import java.util.List;
 public class SampleFileLoader {
 
     static final String HEADER = "id;label;source;featureCount;status";
-    private static final String SEPARATOR = ";";
+    private static final char SEPARATOR = ';';
     private static final int COLUMNS = 5;
 
     public LoadResult load(Path path) {
@@ -51,18 +51,22 @@ public class SampleFileLoader {
     }
 
     private Sample parseLine(int lineNumber, String line, List<ValidationError> errors) {
-        String[] fields = line.split(SEPARATOR, -1);
-        if (fields.length != COLUMNS) {
+        List<String> fields = splitFields(line);
+        if (fields == null) {
+            errors.add(new ValidationError(lineNumber, "row", "Unclosed quote"));
+            return null;
+        }
+        if (fields.size() != COLUMNS) {
             errors.add(new ValidationError(lineNumber, "row",
-                    "Expected " + COLUMNS + " fields but found " + fields.length));
+                    "Expected " + COLUMNS + " fields but found " + fields.size()));
             return null;
         }
 
-        String id = fields[0].trim();
-        String label = fields[1].trim();
-        String source = fields[2].trim();
-        String countText = fields[3].trim();
-        String statusText = fields[4].trim();
+        String id = fields.get(0).trim();
+        String label = fields.get(1).trim();
+        String source = fields.get(2).trim();
+        String countText = fields.get(3).trim();
+        String statusText = fields.get(4).trim();
 
         if (id.isEmpty()) {
             errors.add(new ValidationError(lineNumber, "id", "must not be empty"));
@@ -104,6 +108,44 @@ public class SampleFileLoader {
         }
 
         return new Sample(id, label, source, featureCount, status);
+    }
+
+    static List<String> splitFields(String line) {
+        List<String> fields = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        boolean atFieldStart = true;
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            if (inQuotes) {
+                if (c == '"') {
+                    if (i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                        current.append('"');      
+                        i++;
+                    } else {
+                        inQuotes = false;         
+                    }
+                } else {
+                    current.append(c);           
+                }
+            } else if (c == '"' && atFieldStart) {
+                inQuotes = true;                  
+                atFieldStart = false;
+            } else if (c == SEPARATOR) {
+                fields.add(current.toString());
+                current.setLength(0);
+                atFieldStart = true;
+            } else {
+                current.append(c);
+                atFieldStart = false;
+            }
+        }
+        if (inQuotes) {
+            return null;                         
+        }
+        fields.add(current.toString());           
+        return fields;
     }
 
     private static String stripBom(String s) {
